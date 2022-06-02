@@ -4,7 +4,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 vertexes = (
-    (-1, 1.5, 0.5),
+    (-1, 1.75, 0.5),
     (-1.5, 0.5, -2),
     (0.5, 0.5, -2),
     (0.5, 2, -1),
