@@ -64,7 +64,7 @@ def main():
     pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
     gluPerspective(45, (display[0]/display[1]), 0.1, 50.0)
     glTranslate(0.0,0.0, -10)
-    glRotate(15, 5, 10, 5)
+    # glRotate(15, 5, 10, 5)
     while True: 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
