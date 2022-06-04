@@ -61,11 +61,15 @@ def cube():
 def main():
     pygame.init()
     display = (1200,800)
-    pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
+    window = pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
+    #background image
+    bg_img = pygame.image.load('desert.jpg')
+    bg_img = pygame.transform.scale(bg_img,(1200,800))
     gluPerspective(45, (display[0]/display[1]), 0.1, 50.0)
     glTranslate(0.0,0.0, -10)
     # glRotate(15, 5, 10, 5)
     while True: 
+        window.blit(bg_img,(0,0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit
