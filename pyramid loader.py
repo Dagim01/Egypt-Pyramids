@@ -6,29 +6,35 @@ from OpenGL.GL.shaders import compileProgram, compileShader
 import pyrr
 from TextureLoader import load_texture
 from ObjLoader import ObjLoader
-# import numpy
-# from PIL import Image
 from camera import Camera
+
+def getFileContents(filename):
+    p = os.path.join(os.getcwd(), "shaders", filename)
+    return open(p, 'r').read()
+
+
+vertexShaderContent = getFileContents("triangle.vertex.shader")
+fragmentShaderContent = getFileContents("triangle.fragment.shader")
 
 cam = Camera()
 WIDTH, HEIGHT = 1280, 720
-lastX,lastY = WIDTH/2, HEIGHT/2
+position1,position2 = WIDTH/2, HEIGHT/2
 first_mouse = True
 left, right, forward, backward = False, False, False, False
 
 def mouse_look_clb(window, xpos, ypos):
-    global first_mouse,lastX, lastY
+    global first_mouse,position1, position2
 
     if first_mouse:
-        lastX = xpos
-        lastY = ypos
+        position1 = xpos
+        position2 = ypos
         first_mouse = False
 
-    xoffset = xpos - lastX
-    yoffset = lastY - ypos
+    xoffset = xpos - position1
+    yoffset = position2 - ypos
 
-    lastX = xpos
-    lastY = ypos
+    position1 = xpos
+    position2 = ypos
 
     cam.process_mouse_movement(xoffset, yoffset)
 
@@ -63,169 +69,109 @@ def do_movement():
         cam.process_keyboard("FORWARD", 0.03)
     if backward:
         cam.process_keyboard("BACKWARD", 0.03)  
-# def mouse_enter_clb(window, entered):
-#     global first_mouse
-
-#     if entered:
-#         first_mouse = False
-#     else:
-#         first_mouse = True
 
 
-vertex_src = """
-# version 330
-layout(location = 0) in vec3 a_position;
-layout(location = 1) in vec2 a_texture;
-layout(location = 2) in vec3 a_normal;
-uniform mat4 model;
-uniform mat4 projection;
-uniform mat4 view;
-out vec2 v_texture;
-void main()
-{
-    gl_Position = projection * view * model * vec4(a_position, 1.0);
-    v_texture = a_texture;
-}
-"""
-
-fragment_src = """
-# version 330
-in vec2 v_texture;
-out vec4 out_color;
-uniform sampler2D s_texture;
-void main()
-{
-    out_color = texture(s_texture, v_texture);
-}
-"""
-
-
-# glfw callback functions
-def window_resize(window, width, height):
+def window_resize_clb(window, width, height):
     glViewport(0, 0, width, height)
     projection = pyrr.matrix44.create_perspective_projection_matrix(45, width / height, 0.1, 100)
     glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
-
-
-# initializing glfw library
 if not glfw.init():
     raise Exception("glfw can not be initialized!")
 
-# creating the window
 window = glfw.create_window(WIDTH, HEIGHT, "My OpenGL window", None, None)
-
-# check if window was created
 if not window:
     glfw.terminate()
     raise Exception("glfw window can not be created!")
 
-# set window's position
 glfw.set_window_pos(window, 400, 200)
-
-# set the callback function for window resize
-glfw.set_window_size_callback(window, window_resize)
-
+glfw.set_window_size_callback(window, window_resize_clb)
 glfw.set_cursor_pos_callback(window, mouse_look_clb)
-# glfw.set_cursor_enter_callback(window, mouse_enter_clb)
-glfw.set_input_mode(window,glfw.CURSOR, glfw.CURSOR_DISABLED)
 glfw.set_key_callback(window, key_input_clb)
-
-# make the context current
+glfw.set_input_mode(window, glfw.CURSOR, glfw.CURSOR_DISABLED)
 glfw.make_context_current(window)
 
-# load here the 3d meshes
-chibi_indices, chibi_buffer = ObjLoader.load_model("meshes/pyramid22.obj")
-monkey_indices, monkey_buffer = ObjLoader.load_model("meshes/pyramid11.obj")
+# loading 3d objects here
+pyramid1_idx, pyramid_buf = ObjLoader.load_model("meshes/pyramid22.obj")
+pyramid2_idx, pyramid2_buf = ObjLoader.load_model("meshes/pyramid11.obj")
+floor_indices, floor_buf = ObjLoader.load_model("meshes/floor.obj")
 
-shader = compileProgram(compileShader(vertex_src, GL_VERTEX_SHADER), compileShader(fragment_src, GL_FRAGMENT_SHADER))
+shader = compileProgram(compileShader(vertexShaderContent, GL_VERTEX_SHADER), compileShader(fragmentShaderContent, GL_FRAGMENT_SHADER))
 
-# VAO and VBO
-VAO = glGenVertexArrays(2)
-VBO = glGenBuffers(2)
-# EBO = glGenBuffers(1)
+#VAO and VBO
+VAO = glGenVertexArrays(3)
+VBO = glGenBuffers(3)
 
-# Chibi VAO
 glBindVertexArray(VAO[0])
-# Chibi Vertex Buffer Object
 glBindBuffer(GL_ARRAY_BUFFER, VBO[0])
-glBufferData(GL_ARRAY_BUFFER, chibi_buffer.nbytes, chibi_buffer, GL_STATIC_DRAW)
+glBufferData(GL_ARRAY_BUFFER, pyramid_buf.nbytes, pyramid_buf, GL_STATIC_DRAW)
 
-# glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
-# glBufferData(GL_ELEMENT_ARRAY_BUFFER, chibi_indices.nbytes, chibi_indices, GL_STATIC_DRAW)
-
-# chibi vertices
+# pyramid 1 vertices
 glEnableVertexAttribArray(0)
-glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, chibi_buffer.itemsize * 8, ctypes.c_void_p(0))
-# chibi textures
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, pyramid_buf.itemsize * 8, ctypes.c_void_p(0))
+# pyramid 1 textures
 glEnableVertexAttribArray(1)
-glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, chibi_buffer.itemsize * 8, ctypes.c_void_p(12))
-# chibi normals
-glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, chibi_buffer.itemsize * 8, ctypes.c_void_p(20))
+glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, pyramid_buf.itemsize * 8, ctypes.c_void_p(12))
+# pyramid 1 normals
+glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, pyramid_buf.itemsize * 8, ctypes.c_void_p(20))
 glEnableVertexAttribArray(2)
 
-# Monkey VAO
+
 glBindVertexArray(VAO[1])
-# Monkey Vertex Buffer Object
+#pyramid 2 Vertex Buffer Object
 glBindBuffer(GL_ARRAY_BUFFER, VBO[1])
-glBufferData(GL_ARRAY_BUFFER, monkey_buffer.nbytes, monkey_buffer, GL_STATIC_DRAW)
+glBufferData(GL_ARRAY_BUFFER, pyramid2_buf.nbytes, pyramid2_buf, GL_STATIC_DRAW)
 
-# monkey vertices
+# pyramid 2 vertices
 glEnableVertexAttribArray(0)
-glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, monkey_buffer.itemsize * 8, ctypes.c_void_p(0))
-# monkey textures
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, pyramid2_buf.itemsize * 8, ctypes.c_void_p(0))
+# pyramid 2 textures
 glEnableVertexAttribArray(1)
-glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, monkey_buffer.itemsize * 8, ctypes.c_void_p(12))
-# monkey normals
-glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, monkey_buffer.itemsize * 8, ctypes.c_void_p(20))
+glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, pyramid2_buf.itemsize * 8, ctypes.c_void_p(12))
+# pyramid 2 normals
+glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, pyramid2_buf.itemsize * 8, ctypes.c_void_p(20))
+glEnableVertexAttribArray(2)
+
+# sand VAO
+glBindVertexArray(VAO[2])
+# sad Vertex Buffer Object
+glBindBuffer(GL_ARRAY_BUFFER, VBO[2])
+glBufferData(GL_ARRAY_BUFFER, floor_buf.nbytes, floor_buf, GL_STATIC_DRAW)
+
+# sand vertices
+glEnableVertexAttribArray(0)
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, floor_buf.itemsize * 8, ctypes.c_void_p(0))
+# sand textures
+glEnableVertexAttribArray(1)
+glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, floor_buf.itemsize * 8, ctypes.c_void_p(12))
+# floor normals
+glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, floor_buf.itemsize * 8, ctypes.c_void_p(20))
 glEnableVertexAttribArray(2)
 
 
-textures = glGenTextures(2)
+textures = glGenTextures(3)
 load_texture("meshes/pyramid1.jpg", textures[0])
 load_texture("meshes/pyramid2.jpg", textures[1])
+load_texture("meshes/floor.jpg", textures[2])
 
 glUseProgram(shader)
-glClearColor(0, 0.1, 0.1, 1)
+glClearColor(0.42, 0.82, 0.92, 1)
 glEnable(GL_DEPTH_TEST)
 glEnable(GL_BLEND)
 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
 projection = pyrr.matrix44.create_perspective_projection_matrix(45, WIDTH / HEIGHT, 0.1, 100)
-chibi_pos = pyrr.matrix44.create_from_translation(pyrr.Vector3([0, 5, -10]))
-monkey_pos = pyrr.matrix44.create_from_translation(pyrr.Vector3([-4, 5, 0]))
-
-# eye, target, up
-# view = pyrr.matrix44.create_look_at(pyrr.Vector3([0, 0, 8]), pyrr.Vector3([0, 0, 0]), pyrr.Vector3([0, 1, 0]))
+pyramid1_pos = pyrr.matrix44.create_from_translation(pyrr.Vector3([6, 0, 0]))
+pyramid2_pos = pyrr.matrix44.create_from_translation(pyrr.Vector3([-4, 0, -4]))
+floor_pos = pyrr.matrix44.create_from_translation(pyrr.Vector3([0, 0, 0]))
 
 model_loc = glGetUniformLocation(shader, "model")
 proj_loc = glGetUniformLocation(shader, "projection")
 view_loc = glGetUniformLocation(shader, "view")
 
 glUniformMatrix4fv(proj_loc, 1, GL_FALSE, projection)
-# glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
 
-#background texture
-# texture = glGenTextures(1)
-# glBindTexture(GL_TEXTURE_2D, texture)
-# # texture wrapping params
-# glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-# glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-# # texture filtering params
-# glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-# glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-#backgroundimage
-# image = Image.open("image/desert.jpg") 
-# image = image.convert('RGB')
-# image = image.transpose(Image.FLIP_TOP_BOTTOM)    
-# img_data = numpy.array(list(image.getdata()), numpy.uint8)
-
-# glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-# glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 420, 420, 0, GL_RGB, GL_UNSIGNED_BYTE, img_data)
-
-
-# the main application loop
 while not glfw.window_should_close(window):
-    glfw.poll_events() #get events from the mouse and keyboard
+    glfw.poll_events()
     do_movement()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -233,26 +179,28 @@ while not glfw.window_should_close(window):
     view = cam.get_view_matrix()
     glUniformMatrix4fv(view_loc, 1, GL_FALSE, view)
 
-    rot_y = pyrr.Matrix44.from_y_rotation(0.8 * glfw.get_time())
-    model = pyrr.matrix44.multiply(rot_y, chibi_pos)
+    # rot_y = pyrr.Matrix44.from_y_rotation(0.8 * glfw.get_time())
+    model = pyrr.matrix44.multiply(1, pyramid1_pos)
 
-    # draw the chibi character
+    # drawing 1st pyramid
     glBindVertexArray(VAO[0])
     glBindTexture(GL_TEXTURE_2D, textures[0])
     glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
-    glDrawArrays(GL_TRIANGLES, 0, len(chibi_indices))
-    # glDrawElements(GL_TRIANGLES, len(chibi_indices), GL_UNSIGNED_INT, None)
+    glDrawArrays(GL_TRIANGLES, 0, len(pyramid2_idx))
 
-    rot_y = pyrr.Matrix44.from_y_rotation(-0.8 * glfw.get_time())
-    model = pyrr.matrix44.multiply(rot_y, monkey_pos)
-
-    # draw the monkey head
+    # drawing 2nd pyramid
     glBindVertexArray(VAO[1])
     glBindTexture(GL_TEXTURE_2D, textures[1])
-    glUniformMatrix4fv(model_loc, 1, GL_FALSE, model)
-    glDrawArrays(GL_TRIANGLES, 0, len(monkey_indices))
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, pyramid2_pos)
+    glDrawArrays(GL_TRIANGLES, 0, len(pyramid2_idx))
+
+    # drawing the floor
+    glBindVertexArray(VAO[2])
+    glBindTexture(GL_TEXTURE_2D, textures[2])
+    glUniformMatrix4fv(model_loc, 1, GL_FALSE, floor_pos)
+    glDrawArrays(GL_TRIANGLES, 0, len(floor_indices))
 
     glfw.swap_buffers(window)
 
-# terminate glfw, free up allocated resources
+
 glfw.terminate()
